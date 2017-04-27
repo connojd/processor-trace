@@ -32,6 +32,8 @@
 
 #include "intel-pt.h"
 
+#include <stdio.h>
+
 
 int pt_insn_changes_cpl(const struct pt_insn *insn,
 			const struct pt_insn_ext *iext)
@@ -208,6 +210,7 @@ static int pt_insn_decode_retry(struct pt_insn *insn, struct pt_insn_ext *iext,
 				struct pt_image *image,
 				const struct pt_asid *asid)
 {
+        printf("Executing pt_insn_decode_retry\n");
 	int size, errcode, isid;
 	uint8_t isize, remaining;
 

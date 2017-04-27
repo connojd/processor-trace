@@ -44,6 +44,37 @@
 #include <unistd.h>
 
 
+int pt_section_mk_status_fd(void **pstatus, uint64_t *psize, const char *filename, int fd)
+{
+        (void) filename;
+	struct pt_sec_posix_status *status;
+	struct stat buffer;
+	int errcode;
+
+	if (!pstatus || !psize)
+		return -pte_internal;
+
+	errcode = fstat(fd, &buffer);
+	if (errcode < 0) {
+                perror("ERROR fstat:");
+		return errcode;
+        }
+
+	if (buffer.st_size < 0)
+		return -pte_bad_image;
+
+	status = malloc(sizeof(*status));
+	if (!status)
+		return -pte_nomem;
+
+	status->stat = buffer;
+
+	*pstatus = status;
+	*psize = buffer.st_size;
+
+	return 0;
+}
+
 int pt_section_mk_status(void **pstatus, uint64_t *psize, const char *filename)
 {
 	struct pt_sec_posix_status *status;
@@ -54,8 +85,10 @@ int pt_section_mk_status(void **pstatus, uint64_t *psize, const char *filename)
 		return -pte_internal;
 
 	errcode = stat(filename, &buffer);
-	if (errcode < 0)
+	if (errcode < 0) {
+                perror("ERROR stat:");
 		return errcode;
+        }
 
 	if (buffer.st_size < 0)
 		return -pte_bad_image;
@@ -74,6 +107,8 @@ int pt_section_mk_status(void **pstatus, uint64_t *psize, const char *filename)
 
 static int check_file_status(struct pt_section *section, int fd)
 {
+        printf("Executing check_file_status\n");
+
 	struct pt_sec_posix_status *status;
 	struct stat stat;
 	int errcode;
@@ -100,6 +135,8 @@ static int check_file_status(struct pt_section *section, int fd)
 
 int pt_sec_posix_map(struct pt_section *section, int fd)
 {
+        printf("Executing pt_sec_posix_map\n");
+
 	struct pt_sec_posix_mapping *mapping;
 	uint64_t offset, size, adjustment;
 	uint8_t *base;
@@ -147,6 +184,8 @@ out_map:
 
 int pt_section_map(struct pt_section *section)
 {
+        printf("Executing pt_section_map...\n");
+
 	const char *filename;
 	uint16_t mcount;
 	FILE *file;
@@ -172,15 +211,25 @@ int pt_section_map(struct pt_section *section)
 	if (section->mapping)
 		goto out_unlock;
 
+	errcode = -pte_bad_image;
+
+#ifndef RISTRETTO_PT
 	filename = section->filename;
 	if (!filename)
 		goto out_unlock;
 
-	errcode = -pte_bad_image;
 	fd = open(filename, O_RDONLY);
 	if (fd == -1)
 		goto out_unlock;
-
+#else
+        printf("Duplicating memfd...\n");
+        (void)filename;
+        fd = dup(section->memfd);
+	if (fd == -1) {
+                perror("ERROR: dup(memfd) failed");
+		goto out_unlock;
+        }
+#endif
 	errcode = check_file_status(section, fd);
 	if (errcode < 0)
 		goto out_fd;
@@ -192,6 +241,8 @@ int pt_section_map(struct pt_section *section)
 		close(fd);
 		return pt_section_unlock(section);
 	}
+
+        fprintf(stderr, "ERROR: pt_sec_posix_map failed, fd = %d\n", fd);
 
 	/* Fall back to file based sections - report the original error
 	 * if we fail to convert the file descriptor.

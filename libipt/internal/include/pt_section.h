@@ -112,6 +112,10 @@ struct pt_section {
 	 * - disable block caching.
 	 */
 	uint32_t disable_bcache:1;
+
+	/* Memory-backed fd for forward-only code section
+	 */
+	int memfd;
 };
 
 /* Create a section.
@@ -131,6 +135,9 @@ struct pt_section {
  */
 extern struct pt_section *pt_mk_section(const char *file, uint64_t offset,
 					uint64_t size);
+
+extern struct pt_section *pt_mk_section_fd(const char *file, uint64_t offset,
+					uint64_t size, int fd);
 
 /* Clone (parts of) a section.
  *
@@ -244,6 +251,9 @@ static inline void pt_section_disable_bcache(struct pt_section *section)
  */
 extern int pt_section_mk_status(void **pstatus, uint64_t *psize,
 				const char *filename);
+
+extern int pt_section_mk_status_fd(void **pstatus, uint64_t *psize,
+				const char *filename, int fd);
 
 /* Setup a block cache.
  *
