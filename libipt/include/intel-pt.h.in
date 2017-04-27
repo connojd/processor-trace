@@ -1647,6 +1647,10 @@ extern pt_export int pt_iscache_add_file(struct pt_image_section_cache *iscache,
 					 const char *filename, uint64_t offset,
 					 uint64_t size, uint64_t vaddr);
 
+extern pt_export int pt_iscache_add_file_fd(struct pt_image_section_cache *iscache,
+					 const char *filename, uint64_t offset,
+					 uint64_t size, uint64_t vaddr, int fd);
+
 /** Read memory from a cached file section
  *
  * Reads \@size bytes of memory starting at virtual address \@vaddr in the

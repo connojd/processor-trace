@@ -52,6 +52,58 @@ static char *dupstr(const char *str)
 	return strcpy(dup, str);
 }
 
+struct pt_section *pt_mk_section_fd(const char *filename, uint64_t offset,
+				 uint64_t size, int fd)
+{
+	struct pt_section *section;
+	uint64_t fsize;
+	void *status;
+	int errcode;
+
+	errcode = pt_section_mk_status_fd(&status, &fsize, filename, fd);
+	if (errcode < 0)
+		return NULL;
+
+	/* Fail if the requested @offset lies beyond the end of @file. */
+	if (fsize <= offset)
+		goto out_status;
+
+	/* Truncate @size so the entire range lies within @file. */
+	fsize -= offset;
+	if (fsize < size)
+		size = fsize;
+
+	section = malloc(sizeof(*section));
+	if (!section)
+		goto out_status;
+
+	memset(section, 0, sizeof(*section));
+
+	section->filename = dupstr(filename);
+	section->status = status;
+	section->offset = offset;
+	section->size = size;
+	section->ucount = 1;
+        section->memfd = fd;
+
+#if defined(FEATURE_THREADS)
+
+	errcode = mtx_init(&section->lock, mtx_plain);
+	if (errcode != thrd_success) {
+		free(section->filename);
+		free(section);
+		goto out_status;
+	}
+
+#endif /* defined(FEATURE_THREADS) */
+
+	return section;
+
+out_status:
+	free(status);
+	return NULL;
+}
+
 struct pt_section *pt_mk_section(const char *filename, uint64_t offset,
 				 uint64_t size)
 {
@@ -261,6 +313,9 @@ uint64_t pt_section_offset(const struct pt_section *section)
 
 int pt_section_add_bcache(struct pt_section *section)
 {
+#ifdef RISTRETTO_DEBUG
+        printf("Executing pt_section_add_bcache...\n");
+#endif
 	uint32_t cache_size;
 
 	if (!section || section->bcache)

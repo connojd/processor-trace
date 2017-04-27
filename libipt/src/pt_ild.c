@@ -35,6 +35,7 @@
 #include "pti-disp.h"
 
 #include <string.h>
+#include <stdio.h>
 
 /* SET UP 3 TABLES */
 
@@ -854,6 +855,9 @@ static void init_prefix_table(void)
 
 static int decode(struct pt_ild *ild)
 {
+#ifdef RISTRETTO_DEBUG
+        printf("Executing decode\n");
+#endif
 	return prefix_decode(ild, 0, 0);
 }
 
@@ -894,6 +898,9 @@ void pt_ild_init(void)
 
 static int pt_instruction_length_decode(struct pt_ild *ild)
 {
+#ifdef RISTRETTO_DEBUG
+        printf("Executing pt_instruction_length_decode\n");
+#endif
 	if (!ild)
 		return -pte_internal;
 
@@ -913,6 +920,9 @@ static int pt_instruction_length_decode(struct pt_ild *ild)
 static int pt_instruction_decode(struct pt_insn *insn, struct pt_insn_ext *iext,
 				 const struct pt_ild *ild)
 {
+#ifdef RISTRETTO_DEBUG
+        printf("Executing pt_instruction_decode\n");
+#endif
 	uint8_t opcode, map;
 
 	if (!iext || !ild)
@@ -1192,6 +1202,9 @@ static int pt_instruction_decode(struct pt_insn *insn, struct pt_insn_ext *iext,
 
 int pt_ild_decode(struct pt_insn *insn, struct pt_insn_ext *iext)
 {
+#ifdef RISTRETTO_DEBUG
+        printf("Executing pt_ild_decode\n");
+#endif
 	struct pt_ild ild;
 	int size;
 

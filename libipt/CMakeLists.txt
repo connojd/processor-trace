@@ -28,6 +28,7 @@ include_directories(
   internal/include
 )
 
+
 set(LIBIPT_SECTION_FILES
   src/pt_section.c
   src/pt_section_file.c
@@ -84,9 +85,20 @@ endif (CMAKE_HOST_WIN32)
 
 set(LIBIPT_FILES ${LIBIPT_FILES} ${LIBIPT_SECTION_FILES})
 
-add_library(libipt SHARED
-  ${LIBIPT_FILES}
-)
+add_library(libipt SHARED ${LIBIPT_FILES})
+add_library(ipt STATIC ${LIBIPT_FILES})
+
+if (RISTRETTO_PT)
+    target_compile_definitions(libipt PRIVATE -DRISTRETTO_PT)
+    target_compile_definitions(ipt PRIVATE -DRISTRETTO_PT)
+
+    if (RISTRETTO_DEBUG)
+        target_compile_definitions(libipt PRIVATE -DRISTRETTO_DEBUG)
+        target_compile_definitions(ipt PRIVATE -DRISTRETTO_DEBUG)
+    endif()
+
+    set(LIBIPT_FILES "${LIBIPT_FILES} src/posix/pt_cpuid.c src/pt_cpu.c")
+endif()
 
 # put the version into the intel-pt header
 #
@@ -101,6 +113,7 @@ set_target_properties(libipt PROPERTIES
   VERSION   ${PT_VERSION}
   SOVERSION ${PT_VERSION_MAJOR}
 )
+
 
 install(TARGETS libipt
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

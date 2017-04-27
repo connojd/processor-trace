@@ -35,6 +35,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 
 static void pt_insn_reset(struct pt_insn_decoder *decoder)
@@ -1268,14 +1269,22 @@ int pt_insn_next(struct pt_insn_decoder *decoder, struct pt_insn *uinsn,
 	 * This is necessary to attribute events to the correct instruction.
 	 */
 	errcode = process_events_before(decoder, pinsn);
-	if (errcode < 0)
+	if (errcode < 0) {
+#ifdef RISTRETTO_DEBUG
+                printf("process_events_before: errcode: %d\n", errcode * -1);
+#endif
 		goto err;
+
+        }
 
 	/* If tracing is disabled at this point, we should be at the end
 	 * of the trace - otherwise there should have been a re-enable
 	 * event.
 	 */
 	if (!decoder->enabled) {
+#ifdef RISTRETTO_DEBUG
+                printf("decoder not enabled\n");
+#endif
 		struct pt_event event;
 
 		/* Any query should give us an end of stream, error. */
@@ -1293,8 +1302,14 @@ int pt_insn_next(struct pt_insn_decoder *decoder, struct pt_insn *uinsn,
 	pinsn->mode = decoder->mode;
 
 	errcode = pt_insn_decode(pinsn, &iext, decoder->image, &decoder->asid);
-	if (errcode < 0)
+	if (errcode < 0) {
+#ifdef RISTRETTO_DEBUG
+                printf("pt_insn_decode: errcode: %d\n", errcode * -1);
+                printf("pinsn->ip: %lx\n", pinsn->ip);
+                printf("pinsn->mode: %lx\n", pinsn->mode);
+#endif
 		goto err;
+        }
 
 	/* After decoding the instruction, we must not change the IP in this
 	 * iteration - postpone processing of events that would to the next
@@ -1303,8 +1318,12 @@ int pt_insn_next(struct pt_insn_decoder *decoder, struct pt_insn *uinsn,
 	decoder->event_may_change_ip = 0;
 
 	errcode = process_events_after(decoder, pinsn, &iext);
-	if (errcode < 0)
+	if (errcode < 0) {
+#ifdef RISTRETTO_DEBUG
+                printf("process_events_after: errcode: %d\n", errcode * -1);
+#endif
 		goto err;
+        }
 
 	/* If event processing disabled tracing, we're done for this
 	 * iteration - we will process the re-enable event on the next.
@@ -1314,10 +1333,17 @@ int pt_insn_next(struct pt_insn_decoder *decoder, struct pt_insn *uinsn,
 	 * This may indicate an event already in this instruction.
 	 */
 	if (decoder->enabled) {
+#ifdef RISTRETTO_DEBUG
+                printf("decoder enabled\n");
+#endif
 		/* Proceed errors are signaled one instruction too early. */
 		errcode = proceed(decoder, pinsn, &iext);
-		if (errcode < 0)
+		if (errcode < 0) {
+#ifdef RISTRETTO_DEBUG
+                        printf("proceed: errcode: %d\n", errcode * -1);
+#endif
 			goto err;
+                }
 
 		/* Peek errors are ignored.  We will run into them again
 		 * in the next iteration.
@@ -1326,8 +1352,12 @@ int pt_insn_next(struct pt_insn_decoder *decoder, struct pt_insn *uinsn,
 	}
 
 	errcode = insn_to_user(uinsn, size, pinsn);
-	if (errcode < 0)
+	if (errcode < 0) {
+#ifdef RISTRETTO_DEBUG
+                printf("insn_to_user: errcode: %d\n", errcode * -1);
+#endif
 		return errcode;
+        }
 
 	/* We're done with this instruction.  Now we may change the IP again. */
 	decoder->event_may_change_ip = 1;

@@ -32,6 +32,7 @@
 #include "intel-pt.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 
 static char *dupstr(const char *str)
@@ -452,6 +453,46 @@ const char *pt_iscache_name(const struct pt_image_section_cache *iscache)
 	return iscache->name;
 }
 
+int pt_iscache_add_file_fd(struct pt_image_section_cache *iscache,
+			const char *filename, uint64_t offset, uint64_t size,
+			uint64_t vaddr, int fd)
+{
+	struct pt_section *section;
+	int isid, errcode;
+
+	if (!iscache || !filename) {
+                printf("pt_iscache_add_file: null iscache or filename\n");
+		return -pte_invalid;
+        }
+
+	isid = pt_iscache_find(iscache, filename, offset, size, vaddr);
+	if (isid != 0) {
+                printf("pt_iscache_find: %d\n", isid);
+		return isid;
+        }
+
+        printf("pt_iscache_add_file_fd: filename == %s, offset == %lu, size == %lu\n", filename, offset, size);
+	section = pt_mk_section_fd(filename, offset, size, fd);
+	if (!section) {
+                printf("pt_mk_section returned NULL\n");
+		return -pte_invalid;
+        }
+
+        /* not necessary to change to _fd version */
+	isid = pt_iscache_add(iscache, section, vaddr);
+
+	/* We grab a reference when we add the section.  Drop the one we
+	 * obtained when creating the section.
+	 */
+	errcode = pt_section_put(section);
+	if (errcode < 0) {
+                printf("pt_section_put: %d\n", errcode);
+		return errcode;
+        }
+
+	return isid;
+}
+
 int pt_iscache_add_file(struct pt_image_section_cache *iscache,
 			const char *filename, uint64_t offset, uint64_t size,
 			uint64_t vaddr)
@@ -459,16 +500,23 @@ int pt_iscache_add_file(struct pt_image_section_cache *iscache,
 	struct pt_section *section;
 	int isid, errcode;
 
-	if (!iscache || !filename)
+	if (!iscache || !filename) {
+                printf("pt_iscache_add_file: null iscache or filename\n");
 		return -pte_invalid;
+        }
 
 	isid = pt_iscache_find(iscache, filename, offset, size, vaddr);
-	if (isid != 0)
+	if (isid != 0) {
+                printf("pt_iscache_find: %d\n", isid);
 		return isid;
+        }
 
+        printf("pt_mk_section: filename == %s, offset == %lu, size == %lu\n", filename, offset, size);
 	section = pt_mk_section(filename, offset, size);
-	if (!section)
+	if (!section) {
+                printf("pt_mk_section returned NULL\n");
 		return -pte_invalid;
+        }
 
 	isid = pt_iscache_add(iscache, section, vaddr);
 
@@ -476,8 +524,10 @@ int pt_iscache_add_file(struct pt_image_section_cache *iscache,
 	 * obtained when creating the section.
 	 */
 	errcode = pt_section_put(section);
-	if (errcode < 0)
+	if (errcode < 0) {
+                printf("pt_section_put: %d\n", errcode);
 		return errcode;
+        }
 
 	return isid;
 }
